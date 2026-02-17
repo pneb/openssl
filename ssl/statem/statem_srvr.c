@@ -1044,6 +1044,9 @@ WORK_STATE ossl_statem_server_post_work(SSL_CONNECTION *s, WORK_STATE wst)
         break;
 
     case TLS_ST_SW_SRVR_HELLO:
+        if (statem_flush(s) != 1)
+            return WORK_MORE_A;
+
         if (SSL_CONNECTION_IS_TLS13(s)
             && s->hello_retry_request == SSL_HRR_PENDING) {
             if ((s->options & SSL_OP_ENABLE_MIDDLEBOX_COMPAT) == 0
@@ -1051,6 +1054,7 @@ WORK_STATE ossl_statem_server_post_work(SSL_CONNECTION *s, WORK_STATE wst)
                 return WORK_MORE_A;
             break;
         }
+
 #ifndef OPENSSL_NO_SCTP
         if (SSL_CONNECTION_IS_DTLS(s) && s->hit) {
             unsigned char sctpauthkey[64];
@@ -1137,10 +1141,15 @@ WORK_STATE ossl_statem_server_post_work(SSL_CONNECTION *s, WORK_STATE wst)
         }
         break;
 
+        case TLS_ST_SW_CERT:
+#ifndef OPENSSL_NO_COMP_ALG
+    case TLS_ST_SW_COMP_CERT:
+#endif
     case TLS_ST_SW_SRVR_DONE:
         if (statem_flush(s) != 1)
             return WORK_MORE_A;
         break;
+
 
     case TLS_ST_SW_FINISHED:
         if (statem_flush(s) != 1)
